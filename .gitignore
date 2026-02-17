@@ -1,0 +1,43 @@
+# Dependencies
+node_modules/
+.pnp
+.pnp.js
+venv/
+__pycache__/
+
+# Testing
+coverage/
+
+# Next.js
+/.next/
+/out/
+
+# Production
+build/
+dist/
+
+# Misc
+.DS_Store
+*.pem
+
+# Debug
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Environment Variables & Secrets (CRITICAL)
+.env
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+backend/.env
+frontend/.env.local
+
+# Scraper Cookies (CRITICAL)
+cookies.json
+backend/cookies.json
+
+*.log
+
+*.log
