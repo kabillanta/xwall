@@ -42,6 +42,7 @@ logging.basicConfig(
 )
 logger = logging.getLogger("xScrapper")
 
+
 # ==========================================
 # CONFIGURATION (from .env)
 # ==========================================
@@ -306,6 +307,7 @@ async def fetch_and_process():
         # 4. Skip self-mentions (your own tweets)
         if tweet.user and tweet.user.screen_name and \
            tweet.user.screen_name.lower() == MY_USERNAME.lower():
+            skipped_count += 1
             skipped_count += 1
             continue
 

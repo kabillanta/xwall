@@ -70,13 +70,27 @@ const AGENDA: AgendaItem[] =[
   }
 ];
 
+const IST_TIMEZONE = "Asia/Kolkata";
+
+function getISTTime(date: Date) {
+  const parts = new Intl.DateTimeFormat("en-IN", {
+    timeZone: IST_TIMEZONE,
+    hour: "2-digit",
+    minute: "2-digit",
+    hour12: false,
+  }).formatToParts(date);
+  const h = Number(parts.find((p) => p.type === "hour")!.value);
+  const m = Number(parts.find((p) => p.type === "minute")!.value);
+  return h * 60 + m;
+}
+
 function getStatus(index: number, now: Date): "past" | "active" | "upcoming" {
   const toMinutes = (t: string) => {
     const [h, m] = t.split(":").map(Number);
     return h * 60 + m;
   };
 
-  const currentMinutes = now.getHours() * 60 + now.getMinutes();
+  const currentMinutes = getISTTime(now);
   const itemStart = toMinutes(AGENDA[index].time);
   const nextStart = index < AGENDA.length - 1 ? toMinutes(AGENDA[index + 1].time) : itemStart + 60;
 
@@ -107,9 +121,9 @@ export function Agenda() {
         </div>
         
         <div className="flex items-center gap-3 text-sm font-mono font-medium text-muted-foreground">
-          <span suppressHydrationWarning>{now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
+          <span suppressHydrationWarning>{now.toLocaleTimeString("en-IN", { hour: '2-digit', minute: '2-digit', timeZone: IST_TIMEZONE })}</span>
           <span className="text-muted-foreground/30">•</span>
-          <span suppressHydrationWarning>{new Date().toLocaleDateString()}</span>
+          <span suppressHydrationWarning>{now.toLocaleDateString("en-IN", { timeZone: IST_TIMEZONE })}</span>
         </div>
       </div>
 
