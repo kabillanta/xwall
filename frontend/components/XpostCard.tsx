@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 "use client";
 
 import { Heart, MessageCircle, Repeat2, Share, MoreHorizontal, BarChart2, Image, Smile, MapPin, CalendarClock } from "lucide-react";
@@ -106,7 +107,7 @@ export function XPostCard() {
           <div className="mt-1 text-[15px] leading-normal whitespace-pre-wrap text-foreground">
             Just shipped the new dashboard UI! 🚀
             <br/><br/>
-            It's amazing how much difference a little bit of whitespace and consistent typography makes. The glassmorphic touches really pop on dark mode.
+            It&apos;s amazing how much difference a little bit of whitespace and consistent typography makes. The glassmorphic touches really pop on dark mode.
             <br/><br/>
             What do you think? 👇
             <span className="text-primary block mt-2 hover:underline">#webdesign #uiux #buildinginpublic</span>

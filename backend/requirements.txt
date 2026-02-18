@@ -1,0 +1,5 @@
+twikit
+supabase
+python-dotenv
+# Optional: automatic browser cookie extraction
+browser-cookie3

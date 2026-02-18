@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 "use client";
 
 import { Heart, MessageCircle, Repeat2, Bookmark, BarChart2 } from "lucide-react";
