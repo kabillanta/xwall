@@ -21,8 +21,8 @@ const jetbrainsMono = JetBrains_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Cloud Observability Summit | Live Social Wall",
-  description: "Real-time social feed and event agenda powering the Cloud Observability Summit.",
+  title: "Live X Wall",
+  description: "Real-time social feed and event agenda for your meetup/conference.",
 };
 
 export default function RootLayout({
