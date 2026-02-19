@@ -228,7 +228,7 @@ def save_post_to_db(post_data: dict) -> bool:
     """
     try:
         result = (
-            supabase.table("posts")
+            supabase.table("xwall")
             .upsert(post_data, on_conflict="source_id", ignore_duplicates=True)
             .execute()
         )

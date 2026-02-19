@@ -1,7 +1,13 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 "use client";
 
-import { Heart, MessageCircle, Repeat2, Bookmark, BarChart2 } from "lucide-react";
+import {
+  Heart,
+  MessageCircle,
+  Repeat2,
+  Bookmark,
+  BarChart2,
+} from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { useState, useEffect, useRef, useCallback } from "react";
 import { motion, AnimatePresence } from "framer-motion";
@@ -26,7 +32,7 @@ function XLogo({ className }: { className?: string }) {
 // --- Seeded mock metrics (stable across re-renders) ---
 function seedMetrics(index: number) {
   // Simple hash from index for deterministic "random" values
-  const h = ((index * 2654435761) >>> 0);
+  const h = (index * 2654435761) >>> 0;
   return {
     likes: (h % 490) + 10,
     retweets: ((h >>> 8) % 95) + 5,
@@ -83,7 +89,7 @@ export function XWall() {
     // Initial load: all posts, ascending
     async function fetchAll() {
       const { data, error } = await supabase
-        .from("posts")
+        .from("xwall")
         .select("*")
         .order("created_at", { ascending: true });
 
@@ -101,10 +107,11 @@ export function XWall() {
     // Periodic poll for new posts
     const pollTimer = setInterval(async () => {
       const posts = allPostsRef.current;
-      const lastCreatedAt = posts.length > 0 ? posts[posts.length - 1].created_at : null;
+      const lastCreatedAt =
+        posts.length > 0 ? posts[posts.length - 1].created_at : null;
 
       let query = supabase
-        .from("posts")
+        .from("xwall")
         .select("*")
         .order("created_at", { ascending: true });
 
@@ -127,11 +134,11 @@ export function XWall() {
       .channel("xwall-realtime")
       .on(
         "postgres_changes",
-        { event: "INSERT", schema: "public", table: "posts" },
+        { event: "INSERT", schema: "public", table: "xwall" },
         (payload) => {
           const newTweet = mapPost(payload.new);
           appendPosts([newTweet]);
-        }
+        },
       )
       .subscribe();
 
@@ -169,7 +176,9 @@ export function XWall() {
 
       setDisplayTweet(currentWindow[safeIndex]);
       setGlobalIndex(ws + safeIndex);
-      setPositionLabel(`${safeIndex + 1}/${currentWindow.length} · Window ${windowNumber}`);
+      setPositionLabel(
+        `${safeIndex + 1}/${currentWindow.length} · Window ${windowNumber}`,
+      );
 
       // Advance
       const nextIW = safeIndex + 1;
@@ -345,7 +354,9 @@ export function XWall() {
           transition={{ duration: 8, ease: "linear" }}
           className="h-full"
           style={{
-            backgroundColor: ["#4285F4", "#DB4437", "#F4B400", "#0F9D58"][globalIndex % 4],
+            backgroundColor: ["#4285F4", "#DB4437", "#F4B400", "#0F9D58"][
+              globalIndex % 4
+            ],
           }}
         />
       </div>
