@@ -1,4 +1,4 @@
-/* eslint-disable @typescript-eslint/no-explicit-any */
+/* eslint-disable @typescript-eslint/no-explicit-any, no-console */
 "use client";
 
 import {
@@ -74,6 +74,8 @@ export function XWall() {
   // Mutable playback state in refs to avoid stale closures
   const windowStartRef = useRef(0);
   const indexInWindowRef = useRef(0);
+  const currentGlobalIndexRef = useRef(0);
+  const adminChannelRef = useRef<any>(null);
 
   // Deduplicated append
   const appendPosts = useCallback((newPosts: Tweet[]) => {
@@ -150,7 +152,12 @@ export function XWall() {
 
   // --- Playback engine ---
   useEffect(() => {
-    const tick = () => {
+    let timer: NodeJS.Timeout;
+    let isPaused = false;
+
+    const tick = (force = false) => {
+      if (isPaused && !force) return;
+
       const posts = allPostsRef.current;
 
       if (posts.length === 0) {
@@ -173,12 +180,33 @@ export function XWall() {
       // Clamp indexInWindow to current window size
       const safeIndex = Math.min(iw, currentWindow.length - 1);
       const windowNumber = Math.floor(ws / STRIDE) + 1;
+      const currentGlobal = ws + safeIndex;
 
+      currentGlobalIndexRef.current = currentGlobal;
       setDisplayTweet(currentWindow[safeIndex]);
-      setGlobalIndex(ws + safeIndex);
+      setGlobalIndex(currentGlobal);
       setPositionLabel(
         `${safeIndex + 1}/${currentWindow.length} · Window ${windowNumber}`,
       );
+
+      // Broadcast state to admin
+      if (adminChannelRef.current) {
+        adminChannelRef.current.send({
+          type: "broadcast",
+          event: "sync",
+          payload: {
+            windowStart: ws,
+            indexInWindow: safeIndex,
+            globalIndex: currentGlobal,
+            totalPosts: posts.length,
+            windowSize: currentWindow.length,
+            windowNumber: windowNumber,
+            displayTweet: currentWindow[safeIndex],
+            isPaused: isPaused,
+            timestamp: Date.now(), // Add timestamp for precise sync
+          },
+        });
+      }
 
       // Advance
       const nextIW = safeIndex + 1;
@@ -207,11 +235,94 @@ export function XWall() {
       }
     };
 
+    const startTimer = () => {
+      clearInterval(timer);
+      timer = setInterval(tick, POST_DURATION);
+    };
+
+    // Initialize admin sync channel
+    const adminChannel = supabase.channel("admin-sync");
+    adminChannel
+      .on("broadcast", { event: "control" }, (payload) => {
+        const { action, targetIndex } = payload.payload;
+        const posts = allPostsRef.current;
+        if (!posts.length) return;
+
+        let newGlobalIndex = currentGlobalIndexRef.current;
+
+        if (action === "jump") {
+          newGlobalIndex = targetIndex;
+        } else if (action === "next") {
+          newGlobalIndex = currentGlobalIndexRef.current + 1;
+        } else if (action === "prev") {
+          newGlobalIndex = currentGlobalIndexRef.current - 1;
+        } else if (action === "pause") {
+          isPaused = true;
+          clearInterval(timer);
+          // Broadcast paused state
+          if (adminChannelRef.current) {
+            adminChannelRef.current.send({
+              type: "broadcast",
+              event: "sync_status",
+              payload: { isPaused: true },
+            });
+          }
+          return;
+        } else if (action === "play") {
+          isPaused = false;
+          startTimer();
+          if (adminChannelRef.current) {
+            adminChannelRef.current.send({
+              type: "broadcast",
+              event: "sync_status",
+              payload: { isPaused: false },
+            });
+          }
+          return;
+        }
+
+        // Clamp newGlobalIndex
+        if (newGlobalIndex < 0) newGlobalIndex = 0;
+        if (newGlobalIndex >= posts.length) newGlobalIndex = posts.length - 1;
+
+        // Calculate new windowStart and indexInWindow
+        // We want to find the window that contains this index.
+        // A window starts at N * STRIDE.
+        // We want: windowStart <= newGlobalIndex < windowStart + WINDOW_SIZE
+        // Let's just set windowStart to floor(newGlobalIndex / STRIDE) * STRIDE
+        let newWindowStart = Math.floor(newGlobalIndex / STRIDE) * STRIDE;
+
+        // Ensure we don't go out of bounds with windowStart
+        if (newWindowStart > posts.length - 1) {
+          newWindowStart = Math.max(0, posts.length - WINDOW_SIZE);
+        }
+
+        windowStartRef.current = newWindowStart;
+        indexInWindowRef.current = newGlobalIndex - newWindowStart;
+
+        // Force immediate update
+        tick(true);
+
+        if (!isPaused) {
+          startTimer(); // Restart timer to give full duration to the new post
+        }
+      })
+      .subscribe((status) => {
+        if (status === "SUBSCRIBED") {
+          adminChannelRef.current = adminChannel;
+          // Send initial state once subscribed
+          tick(true);
+        }
+      });
+
     // Run first tick immediately
     tick();
+    startTimer();
 
-    const timer = setInterval(tick, POST_DURATION);
-    return () => clearInterval(timer);
+    return () => {
+      clearInterval(timer);
+      supabase.removeChannel(adminChannel);
+    };
   }, []);
 
   // --- Empty state ---
