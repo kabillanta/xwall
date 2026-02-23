@@ -9,53 +9,57 @@ The system is architected to be a reliable, zero-cost alternative to enterprise 
 xWall operates as a decoupled system with two primary components:
 
 1.  **Backend Ingestion Engine (Python)**:
-    -   Leverages browser emulation to interface with X, bypassing API rate limits and costs.
-    -   Implements an asynchronous event loop for concurrent data fetching and processing.
-    -   Features intelligent filtering to exclude retweets, replies, and duplicate content.
-    -   Utilizes exponential backoff strategies to ensure resilience against network interruptions.
+    - Leverages browser emulation to interface with X, bypassing API rate limits and costs.
+    - Implements an asynchronous event loop for concurrent data fetching and processing.
+    - Features intelligent filtering to exclude retweets, replies, and duplicate content.
+    - Utilizes exponential backoff strategies to ensure resilience against network interruptions.
 
 2.  **Frontend Display (Next.js)**:
-    -   A high-performance React application built on Next.js 15.
-    -   Connects to a Supabase PostgreSQL database for real-time content delivery.
-    -   Renders content in a responsive masonry grid optimized for large-format displays and projectors.
+    - A high-performance React application built on Next.js 15.
+    - Connects to a Supabase PostgreSQL database for real-time content delivery.
+    - Renders content in a responsive masonry grid optimized for large-format displays and projectors.
 
 ## Key Capabilities
 
--   **Event-Optimized Reliability**: Engineered to run autonomously for the duration of an event, polling for updates at one-minute intervals.
--   **Content Curation**: Automatically filters noise to prioritize original, high-value community content.
--   **Infrastructure Independence**: runs on standard hardware or cloud instances with minimal resource requirements.
--   **Zero Operational Cost**: Eliminates recurring SaaS fees associated with commercial social wall platforms.
+- **Event-Optimized Reliability**: Engineered to run autonomously for the duration of an event, polling for updates at one-minute intervals.
+- **Content Curation**: Automatically filters noise to prioritize original, high-value community content.
+- **Infrastructure Independence**: runs on standard hardware or cloud instances with minimal resource requirements.
+- **Zero Operational Cost**: Eliminates recurring SaaS fees associated with commercial social wall platforms.
 
 ## Technical Stack
 
--   **Backend**: Python 3.12+, Twikit, Asyncio.
--   **Frontend**: Next.js 15, TypeScript, Tailwind CSS.
--   **Database**: Supabase (PostgreSQL).
+- **Backend**: Python 3.12+, Twikit, Asyncio.
+- **Frontend**: Next.js 15, TypeScript, Tailwind CSS.
+- **Database**: Supabase (PostgreSQL).
 
 ## Deployment
 
 ### Prerequisites
 
--   Node.js 18 or higher
--   Python 3.10 or higher
--   Supabase Project Credentials
+- Node.js 18 or higher
+- Python 3.10 or higher
+- Supabase Project Credentials
 
 ### Configuration
 
 1.  Clone the repository:
+
     ```bash
     git clone https://github.com/kabillanta/xwall.git
     cd xwall
     ```
 
 2.  Initialize environment variables:
+
     ```bash
     cp backend/.env.template backend/.env
     cp frontend/.env.template frontend/.env.local
     ```
+
     Populate the `.env` files with your Supabase credentials and target search terms (e.g., `@yourcommunityhandle`).
 
 3.  Start the Ingestion Engine:
+
     ```bash
     cd backend
     pip install -r requirements.txt
@@ -78,13 +82,13 @@ The social wall (`XWall` component) uses a sliding window algorithm to cycle thr
 
 Posts are stored in a chronological array in memory. A window of fixed size slides forward through this array, displaying one post at a time with animated transitions.
 
-| Parameter       | Default | Description                                      |
-|-----------------|---------|--------------------------------------------------|
-| `WINDOW_SIZE`   | 15      | Number of posts in the active window             |
-| `STRIDE`        | 5       | Posts to advance when the window slides forward  |
-| `POST_DURATION` | 8000 ms | Time each post remains on screen                 |
-| `POLL_INTERVAL` | 60000 ms| Fallback polling interval for new posts          |
-| `LOOP_TAIL`     | 50      | Number of recent posts to loop when caught up    |
+| Parameter       | Default  | Description                                     |
+| --------------- | -------- | ----------------------------------------------- |
+| `WINDOW_SIZE`   | 15       | Number of posts in the active window            |
+| `STRIDE`        | 5        | Posts to advance when the window slides forward |
+| `POST_DURATION` | 8000 ms  | Time each post remains on screen                |
+| `POLL_INTERVAL` | 60000 ms | Fallback polling interval for new posts         |
+| `LOOP_TAIL`     | 50       | Number of recent posts to loop when caught up   |
 
 **Window progression:**
 
@@ -104,7 +108,7 @@ When the playback cursor reaches the end of the available posts, it resets to th
 Three ingestion channels feed posts into the display array:
 
 1. **Initial fetch** -- on mount, all existing posts are loaded from Supabase in ascending chronological order.
-2. **Realtime subscription** -- Supabase Postgres Changes (INSERT events on the `posts` table) push new posts to the client immediately.
+2. **Realtime subscription** -- Supabase Postgres Changes (INSERT events on the `xwall` table) push new posts to the client immediately.
 3. **Periodic polling** -- a 60-second fallback poll catches anything the realtime channel may have missed.
 
 All three paths deduplicate by `source_id` before appending.

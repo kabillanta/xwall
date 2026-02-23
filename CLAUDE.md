@@ -13,13 +13,14 @@ Two fully decoupled components sharing a Supabase PostgreSQL database. The front
 - **Backend** (`backend/scrapper.py`): Single-file Python async scraper using `twikit` (no API key needed — uses browser cookies). Polls X for mentions at configurable intervals, filters out retweets/replies/quotes/self-mentions, and upserts to Supabase.
 - **Frontend** (`frontend/`): Next.js 16 + React 19 app. Reads posts from Supabase and renders them in a display optimized for projectors/large screens. Layout: event agenda panel (left 4 cols) and social wall (right 8 cols).
 
-Data flows one way: scraper → Supabase `posts` table → frontend display.
+Data flows one way: scraper → Supabase `xwall` table → frontend display.
 
 ## Display Engine: Sliding Window Playback
 
 The `XWall` component (`frontend/components/XWall.tsx`) uses a sliding window algorithm to cycle through posts one at a time with animated transitions.
 
 **Constants (all in `XWall.tsx`):**
+
 - `WINDOW_SIZE = 15` — posts per active window
 - `STRIDE = 5` — posts to advance when the window slides (66% overlap between windows)
 - `POST_DURATION = 8000` — milliseconds each post stays on screen
@@ -29,13 +30,15 @@ The `XWall` component (`frontend/components/XWall.tsx`) uses a sliding window al
 **Window progression:** Window N starts at `STRIDE * (N-1)`. Each window overlaps the previous by `WINDOW_SIZE - STRIDE` posts. Overlap is intentional for event displays where attendees glance intermittently.
 
 **Data ingestion into the display array has three channels:**
+
 1. Initial full fetch from Supabase on mount (ascending chronological order)
-2. Supabase realtime subscription (INSERT events on the `posts` table)
+2. Supabase realtime subscription (INSERT events on the `xwall` table)
 3. 60-second fallback poll for anything realtime missed
 
 All paths deduplicate by `source_id` before appending to the in-memory array.
 
 **Timing at event scale (~100 posts):**
+
 - One full window: 15 x 8s = 120s
 - Full pass through all posts: ~40 min
 - Loop cycle (last 50): ~20 min
@@ -47,13 +50,15 @@ All paths deduplicate by `source_id` before appending to the in-memory array.
 ## Commands
 
 ### Frontend (from `frontend/`)
+
 ```bash
-npm run dev      
-npm run build    
-npm run lint     
+npm run dev
+npm run build
+npm run lint
 ```
 
 ### Backend (from `backend/`)
+
 ```bash
 pip install -r requirements.txt             # All deps (core + optional)
 python scrapper.py                           # Start the polling scraper
@@ -64,6 +69,7 @@ No test suite exists yet for either component.
 ## Environment Setup
 
 Both components need `.env` files — copy from templates:
+
 - `backend/.env` from `backend/.env.template` (Supabase creds, search term, username, poll interval)
 - `frontend/.env.local` from `frontend/.env.template` (Supabase URL + anon key as `NEXT_PUBLIC_*`)
 
@@ -80,7 +86,7 @@ Both components need `.env` files — copy from templates:
 
 - **Frontend**: Next.js 16, React 19, TypeScript, Tailwind CSS v4, shadcn/ui (Radix primitives), Framer Motion, Supabase JS client
 - **Backend**: Python 3.10+, twikit, supabase-py, asyncio, VADER sentiment (optional)
-- **Database**: Supabase (PostgreSQL) — `posts` table with `source_id` as unique key for deduplication
+- **Database**: Supabase (PostgreSQL) — `xwall` table with `source_id` as unique key for deduplication
 
 ## Known Issues
 
@@ -103,6 +109,7 @@ Both components need `.env` files — copy from templates:
 ## Display Tuning
 
 Adjust constants in `XWall.tsx` based on event volume:
+
 - **High volume / backlog:** reduce `POST_DURATION` (e.g., 5000ms) to cycle faster
 - **Too much repetition:** increase `STRIDE` (e.g., 10 or 15) to reduce overlap
 - **Longer idle loops:** increase `LOOP_TAIL` beyond 50
