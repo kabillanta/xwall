@@ -13,6 +13,8 @@ import { useState, useEffect, useRef, useCallback } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { supabase } from "@/lib/supabase";
 
+import { TABLE_NAME } from "@/lib/constants";
+
 // --- Constants ---
 const WINDOW_SIZE = 15;
 const STRIDE = 5;
@@ -91,7 +93,7 @@ export function XWall() {
     // Initial load: all posts, ascending
     async function fetchAll() {
       const { data, error } = await supabase
-        .from("posts")
+        .from(TABLE_NAME)
         .select("*")
         .neq("status", "REJECTED")
         .order("created_at", { ascending: true });
@@ -114,7 +116,7 @@ export function XWall() {
         posts.length > 0 ? posts[posts.length - 1].created_at : null;
 
       let query = supabase
-        .from("posts")
+        .from(TABLE_NAME)
         .select("*")
         .neq("status", "REJECTED")
         .order("created_at", { ascending: true });
@@ -138,7 +140,7 @@ export function XWall() {
       .channel("xwall-realtime")
       .on(
         "postgres_changes",
-        { event: "INSERT", schema: "public", table: "posts" },
+        { event: "INSERT", schema: "public", table: TABLE_NAME },
         (payload) => {
           if (payload.new.status !== "REJECTED") {
             const newTweet = mapPost(payload.new);
@@ -148,7 +150,7 @@ export function XWall() {
       )
       .on(
         "postgres_changes",
-        { event: "UPDATE", schema: "public", table: "posts" },
+        { event: "UPDATE", schema: "public", table: TABLE_NAME },
         (payload) => {
           if (payload.new.status === "REJECTED") {
             // Remove from local array if it was rejected while we were polling

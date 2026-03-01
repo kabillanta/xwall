@@ -3,6 +3,7 @@
 
 import { useEffect, useState } from "react";
 import { supabase } from "@/lib/supabase";
+import { TABLE_NAME } from "@/lib/constants";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
 import { Badge } from "@/components/ui/badge";
@@ -74,7 +75,7 @@ export default function AdminBoard() {
     // Fetch all posts for the moderation list
     const fetchPosts = async () => {
       const { data, error } = await supabase
-        .from("posts")
+        .from(TABLE_NAME)
         .select("*")
         .order("created_at", { ascending: false })
         .limit(100); // Last 100 for performance
@@ -103,7 +104,7 @@ export default function AdminBoard() {
       .channel("admin-list")
       .on(
         "postgres_changes",
-        { event: "*", schema: "public", table: "posts" },
+        { event: "*", schema: "public", table: TABLE_NAME },
         () => {
           fetchPosts(); // Refetch on any DB change to keep list fresh
         },
@@ -165,7 +166,7 @@ export default function AdminBoard() {
     try {
       // Update in Supabase
       const { error } = await supabase
-        .from("posts")
+        .from(TABLE_NAME)
         .update({ status: "REJECTED" })
         .eq("source_id", sourceId);
 
@@ -189,7 +190,7 @@ export default function AdminBoard() {
   const handleUnblockPost = async (sourceId: string) => {
     try {
       const { error } = await supabase
-        .from("posts")
+        .from(TABLE_NAME)
         .update({ status: "APPROVED" }) // Assuming APPROVED or PENDING is the valid state
         .eq("source_id", sourceId);
 
