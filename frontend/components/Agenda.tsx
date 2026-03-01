@@ -1,3 +1,4 @@
+/* eslint-disable react-hooks/set-state-in-effect */
 "use client";
 
 import { useState, useEffect, useRef } from "react";
@@ -89,6 +90,7 @@ export function Agenda() {
   const [now, setNow] = useState(new Date());
 
   useEffect(() => {
+    setNow(new Date()); // Update immediately on mount to fix hydration mismatch
     const timer = setInterval(() => setNow(new Date()), 30_000); // update every 30s
     return () => clearInterval(timer);
   }, []);
@@ -97,7 +99,9 @@ export function Agenda() {
     <div className="h-full flex flex-col bg-card rounded-xl border shadow-sm overflow-hidden">
       {/* Community Logo */}
       <div className="px-6 py-5 border-b flex items-center justify-center bg-card">
-        <h1 className="text-2xl font-bold tracking-tight">Your Event Name</h1>
+        <h1 className="text-2xl font-bold tracking-tight">
+          Cloud Observability Summit
+        </h1>
       </div>
 
       <div className="px-5 py-3 border-b bg-muted/20 flex flex-row items-center justify-between">

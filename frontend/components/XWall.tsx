@@ -91,8 +91,9 @@ export function XWall() {
     // Initial load: all posts, ascending
     async function fetchAll() {
       const { data, error } = await supabase
-        .from("xwall")
+        .from("posts")
         .select("*")
+        .neq("status", "REJECTED")
         .order("created_at", { ascending: true });
 
       if (error) {
@@ -113,8 +114,9 @@ export function XWall() {
         posts.length > 0 ? posts[posts.length - 1].created_at : null;
 
       let query = supabase
-        .from("xwall")
+        .from("posts")
         .select("*")
+        .neq("status", "REJECTED")
         .order("created_at", { ascending: true });
 
       if (lastCreatedAt) {
@@ -136,10 +138,24 @@ export function XWall() {
       .channel("xwall-realtime")
       .on(
         "postgres_changes",
-        { event: "INSERT", schema: "public", table: "xwall" },
+        { event: "INSERT", schema: "public", table: "posts" },
         (payload) => {
-          const newTweet = mapPost(payload.new);
-          appendPosts([newTweet]);
+          if (payload.new.status !== "REJECTED") {
+            const newTweet = mapPost(payload.new);
+            appendPosts([newTweet]);
+          }
+        },
+      )
+      .on(
+        "postgres_changes",
+        { event: "UPDATE", schema: "public", table: "posts" },
+        (payload) => {
+          if (payload.new.status === "REJECTED") {
+            // Remove from local array if it was rejected while we were polling
+            allPostsRef.current = allPostsRef.current.filter(
+              (p) => p.source_id !== payload.new.source_id,
+            );
+          }
         },
       )
       .subscribe();
@@ -244,8 +260,22 @@ export function XWall() {
     const adminChannel = supabase.channel("admin-sync");
     adminChannel
       .on("broadcast", { event: "control" }, (payload) => {
-        const { action, targetIndex } = payload.payload;
-        const posts = allPostsRef.current;
+        const { action, targetIndex, sourceId } = payload.payload;
+        let posts = allPostsRef.current;
+
+        if (action === "block" && sourceId) {
+          // Remove the blocked post from our current queue immediately
+          allPostsRef.current = posts.filter((p) => p.source_id !== sourceId);
+          posts = allPostsRef.current;
+
+          // Force a tick to move to the next valid post in the updated array
+          tick(true);
+          if (!isPaused) {
+            startTimer();
+          }
+          return;
+        }
+
         if (!posts.length) return;
 
         let newGlobalIndex = currentGlobalIndexRef.current;

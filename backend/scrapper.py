@@ -226,24 +226,34 @@ def save_post_to_db(post_data: dict) -> bool:
     Uses upsert with ignoreDuplicates to skip existing records.
     Returns True if a new row was inserted.
     """
-    try:
-        result = (
-            supabase.table("xwall")
-            .upsert(post_data, on_conflict="source_id", ignore_duplicates=True)
-            .execute()
-        )
-        if result.data:
-            logger.info(
-                f"✅ NEW mention saved — @{post_data['author_handle']}: "
-                f"{post_data['content'][:60]}..."
+    for attempt in range(1, MAX_RETRIES + 1):
+        try:
+            result = (
+                supabase.table("posts")
+                .upsert(post_data, on_conflict="source_id", ignore_duplicates=True)
+                .execute()
             )
-            return True
-        else:
-            logger.debug(f"⏭️  Duplicate skipped: {post_data['source_id']}")
-            return False
-    except Exception as e:
-        logger.error(f"DB insert error: {e}")
-        return False
+            if result.data:
+                logger.info(
+                    f"✅ NEW mention saved — @{post_data['author_handle']}: "
+                    f"{post_data['content'][:60]}..."
+                )
+                return True
+            else:
+                logger.debug(f"⏭️  Duplicate skipped: {post_data['source_id']}")
+                return False
+        except Exception as e:
+            delay = BASE_DELAY ** attempt
+            logger.warning(
+                f"[DB Retry {attempt}/{MAX_RETRIES}] HTTP error or connection issue saving post: {e}. "
+                f"Retrying in {delay}s..."
+            )
+            if attempt == MAX_RETRIES:
+                logger.error(f"DB insert failed permanently for {post_data['source_id']} after {MAX_RETRIES} attempts.")
+                return False
+            import time
+            time.sleep(delay)
+    return False
 
 
 # ==========================================
